@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { COUNTRIES, type Country } from "../../shared/countries.ts";
-import { addJobsToCountry, type SheetIo } from "../../shared/addJobs.ts";
+import { addJobsToCountry, checkJobOnCountry, type SheetIo } from "../../shared/addJobs.ts";
 import { sheetRange, startRowFromRange, type ExistingSheet } from "../../shared/sheetLogic.ts";
 import { readConfig } from "./env.ts";
 import { HttpError } from "./httpError.ts";
@@ -53,7 +53,18 @@ function explainGoogleError(error: unknown, country: string): HttpError {
       "The service account cannot edit this spreadsheet. Share the spreadsheet with the service account email as Editor.",
     );
   }
-  return new HttpError(status >= 400 && status < 600 ? status : 500, message);
+  // Google / gateways sometimes surface 424 Failed Dependency with a useless body.
+  if (status === 424 || /failed dependency/i.test(message)) {
+    return new HttpError(
+      502,
+      "Google Sheets dependency failed. Confirm the Sheets API is enabled and the spreadsheet is shared with the service account, then retry.",
+    );
+  }
+  if (status === 429 || status === 503) {
+    return new HttpError(502, "Google Sheets is busy or rate-limited. Wait a moment and retry.");
+  }
+  const safeStatus = status >= 400 && status < 600 && status !== 424 ? status : 500;
+  return new HttpError(safeStatus, message.trim() || "Google Sheets request failed.");
 }
 
 function asTable(values: unknown[] | null | undefined): string[][] {
@@ -89,7 +100,7 @@ function googleIo(): SheetIo {
         await sheets.spreadsheets.values.batchUpdate({
           spreadsheetId,
           requestBody: {
-            valueInputOption: "RAW",
+            valueInputOption: "USER_ENTERED",
             data: ranges.map((item) => ({
               range: item.range,
               values: item.values,
@@ -108,6 +119,13 @@ export async function addJobsWithGoogle(input: {
   jobs: { jobUrl: string }[];
 }): Promise<{ added: number; skipped: number; message: string }> {
   return addJobsToCountry(googleIo(), input);
+}
+
+export async function checkJobWithGoogle(input: {
+  country: Country;
+  jobUrl: string;
+}): Promise<{ present: boolean }> {
+  return checkJobOnCountry(googleIo(), input);
 }
 
 export async function checkGoogleConnection(): Promise<string> {

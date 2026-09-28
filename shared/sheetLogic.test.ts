@@ -7,11 +7,13 @@ import {
   normalizeJobUrl,
   parseAddJobRequest,
   planSheetWrites,
+  sheetDateKey,
+  sheetHasJobUrl,
   sheetRange,
   startRowFromRange,
 } from "./sheetLogic.ts";
 
-const today = "2026/9/27";
+const today = "2026-09-27";
 
 test("countries and platform are fixed", () => {
   assert.deepEqual(COUNTRIES, [
@@ -19,16 +21,21 @@ test("countries and platform are fixed", () => {
     "Argentina",
     "Colombia",
     "Dominican Republic",
-    "Other",
   ]);
   assert.equal(DEFAULT_COUNTRY, "Argentina");
   assert.equal(JOB_PLATFORM, "LinkedIn");
 });
 
-test("formats America/New_York dates without zero padding", () => {
-  assert.equal(formatNyDate(new Date("2026-09-27T15:00:00.000Z")), "2026/9/27");
-  assert.equal(formatNyDate(new Date("2026-01-05T15:00:00.000Z")), "2026/1/5");
-  assert.equal(formatNyDate(new Date("2026-01-01T04:30:00.000Z")), "2025/12/31");
+test("formats America/New_York dates as YYYY-MM-DD", () => {
+  assert.equal(formatNyDate(new Date("2026-09-27T15:00:00.000Z")), "2026-09-27");
+  assert.equal(formatNyDate(new Date("2026-01-05T15:00:00.000Z")), "2026-01-05");
+  assert.equal(formatNyDate(new Date("2026-01-01T04:30:00.000Z")), "2025-12-31");
+});
+
+test("sheet date keys match across text formats", () => {
+  assert.equal(sheetDateKey("2026/9/27"), "2026-09-27");
+  assert.equal(sheetDateKey("9/27/2026"), "2026-09-27");
+  assert.equal(sheetDateKey("2026-09-27"), "2026-09-27");
 });
 
 test("normalizes host case, hash, and trailing slash", () => {
@@ -92,6 +99,32 @@ test("plans the next A-F row with LinkedIn, No, and Day_Count", () => {
       values: [[5, today, 2, "Argentina", "LinkedIn", "https://www.linkedin.com/jobs/view/8"]],
     },
   ]);
+});
+
+test("sheetHasJobUrl matches normalized URLs", () => {
+  assert.equal(
+    sheetHasJobUrl(
+      {
+        startRow: 1,
+        values: [
+          ["No", "Date", "Day_Count", "Country", "Job_Platform", "Job_URL"],
+          ["1", "2026-09-27", "1", "Brazil", "LinkedIn", "https://www.linkedin.com/jobs/view/4"],
+        ],
+      },
+      "https://WWW.LinkedIn.com/jobs/view/4/",
+    ),
+    true,
+  );
+  assert.equal(
+    sheetHasJobUrl(
+      {
+        startRow: 1,
+        values: [["No", "Date", "Day_Count", "Country", "Job_Platform", "Job_URL"]],
+      },
+      "https://www.linkedin.com/jobs/view/4",
+    ),
+    false,
+  );
 });
 
 test("skips a duplicate URL on the same tab", () => {

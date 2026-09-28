@@ -3,7 +3,6 @@ export const COUNTRIES = [
   "Argentina",
   "Colombia",
   "Dominican Republic",
-  "Other",
 ] as const;
 
 export type Country = (typeof COUNTRIES)[number];

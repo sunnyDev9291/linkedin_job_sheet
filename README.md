@@ -1,6 +1,6 @@
 # LinkedIn Job Sheet
 
-Chrome extension that saves the current page URL to a Google Sheet when you press Space, then M. Every row is written with Job_Platform set to LinkedIn. The country comes from the popup or options page.
+Chrome extension that shows whether the current page URL is already on a Google Sheet and lets you add it with the top-right Add button. Every row is written with Job_Platform set to LinkedIn. The country comes from the popup or options page.
 
 The Google service-account private key stays on the backend. It is not part of the extension package.
 
@@ -12,7 +12,6 @@ Create one spreadsheet with these tabs, using the names exactly:
 - Argentina
 - Colombia
 - Dominican Republic
-- Other
 
 Row 1 of each tab:
 
@@ -22,9 +21,9 @@ Row 1 of each tab:
 
 Example data row:
 
-`1 | 2026/9/27 | 1 | Argentina | LinkedIn | https://www.linkedin.com/jobs/view/123`
+`1 | 2026-09-27 | 1 | Argentina | LinkedIn | https://www.linkedin.com/jobs/view/123`
 
-- Date uses the America/New_York calendar date, written as `2026/9/27`.
+- Date uses the America/New_York calendar date, written as `2026-09-27` so Google Sheets stores a Date value (not plain text).
 - No is the next integer after the highest No already on that tab.
 - Day_Count is how many rows on that tab already use today's date, plus one.
 - Job_Platform is always LinkedIn. The backend overwrites any other platform a client sends.
@@ -74,7 +73,7 @@ npm run backend
 
 The API listens on `http://127.0.0.1:8787`.
 
-- `GET /health` checks the extension key and that all five country tabs exist.
+- `GET /health` checks the extension key and that all four country tabs exist.
 - `POST /add-job` with header `X-Extension-Key` adds jobs.
 
 ```powershell
@@ -106,6 +105,6 @@ Load `build/extension`, not the repository root. That folder contains only the e
 
 Then open the extension popup. The country dropdown is at the top and defaults to Argentina. Changing it saves immediately. The same dropdown is on the options page, along with the API base (`http://127.0.0.1:8787`), the extension key, and **Test connection**.
 
-On a job page, press Space, then M within about 800 milliseconds. The page URL, without the hash, is added to the saved country tab. The shortcut is ignored while focus is in an input, textarea, select, or contenteditable field. Hold Shift while pressing M to pick a country for that save only; Escape cancels. The picked country does not change the saved default.
+On a job page, the top-right panel shows **In sheet** or **Not yet** for the saved country tab. When it says Not yet, click Add. The page URL, without the hash, is added and the status switches to In sheet. Hold Shift while clicking Add to pick a country for that save only; Escape cancels. The picked country does not change the saved default.
 
 `npm run pack` writes `linkedin-job-sheet.zip` from `build/extension`. Use that zip if you need to pass the extension to someone. Do not zip the repository.

@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { createApp } from "./app.ts";
 import { readConfig } from "./env.ts";
-import { addJobsWithGoogle, checkGoogleConnection } from "./googleSheets.ts";
+import { addJobsWithGoogle, checkGoogleConnection, checkJobWithGoogle } from "./googleSheets.ts";
 import { HttpError } from "./httpError.ts";
 
 dotenv.config({ path: "backend/.env" });
@@ -21,6 +21,9 @@ const app = createApp({
   },
   addJob(input) {
     return addJobsWithGoogle(input);
+  },
+  jobStatus(input) {
+    return checkJobWithGoogle(input);
   },
   health() {
     return checkGoogleConnection();

@@ -71,7 +71,7 @@ test("writes headers and one LinkedIn row, then skips the same URL", async () =>
   assert.deepEqual(sheet.cell("Argentina", 1), ["No", "Date", "Day_Count", "Country", "Job_Platform", "Job_URL"]);
   assert.deepEqual(sheet.cell("Argentina", 2), [
     1,
-    "2026/9/27",
+    "2026-09-27",
     1,
     "Argentina",
     "LinkedIn",
@@ -100,7 +100,7 @@ test("Day_Count restarts on a new New York date and No keeps growing", async () 
     },
     {
       range: "'Dominican Republic'!A2:F2",
-      values: [[7, "2026/9/26", 3, "Dominican Republic", "LinkedIn", "https://www.linkedin.com/jobs/view/1"]],
+      values: [[7, "2026-09-26", 3, "Dominican Republic", "LinkedIn", "https://www.linkedin.com/jobs/view/1"]],
     },
   ]);
   sheet.updates.length = 0;
@@ -114,7 +114,7 @@ test("Day_Count restarts on a new New York date and No keeps growing", async () 
   assert.deepEqual(sheet.updates, ["'Dominican Republic'!A3:F3"]);
   assert.deepEqual(sheet.cell("Dominican Republic", 3), [
     8,
-    "2026/9/27",
+    "2026-09-27",
     1,
     "Dominican Republic",
     "LinkedIn",

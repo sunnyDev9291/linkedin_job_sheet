@@ -3,6 +3,7 @@ import {
   formatNyDate,
   planSheetWrites,
   resultMessage,
+  sheetHasJobUrl,
   sheetRange,
   type ExistingSheet,
 } from "./sheetLogic.ts";
@@ -41,4 +42,12 @@ export async function addJobsToCountry(
     skipped: plan.skipped,
     message: resultMessage(input.country, plan.added, plan.skipped),
   };
+}
+
+export async function checkJobOnCountry(
+  io: SheetIo,
+  input: { country: Country; jobUrl: string },
+): Promise<{ present: boolean }> {
+  const existing = await io.read(input.country);
+  return { present: sheetHasJobUrl(existing, input.jobUrl) };
 }

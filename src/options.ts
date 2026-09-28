@@ -1,5 +1,4 @@
 import { isCountry, type Country } from "../shared/countries.ts";
-import { apiUrl } from "./endpoint.ts";
 import { bindCountrySelect, loadSettings, saveSettings } from "./storage.ts";
 
 const select = document.querySelector<HTMLSelectElement>("#country");
@@ -58,15 +57,12 @@ async function testConnection(): Promise<void> {
     return;
   }
   try {
-    const response = await fetch(apiUrl(settings.apiBase, "health"), {
-      headers: { "X-Extension-Key": settings.extensionKey },
-    });
-    const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string; error?: string } | null;
-    if (response.ok && payload?.ok) {
-      result!.textContent = payload.message || "Connected.";
-      return;
-    }
-    result!.textContent = payload?.error || `Test failed (${response.status}).`;
+    const response = (await chrome.runtime.sendMessage({
+      type: "TEST_CONNECTION",
+      apiBase: settings.apiBase,
+      extensionKey: settings.extensionKey,
+    })) as { ok?: boolean; text?: string } | undefined;
+    result!.textContent = response?.text || "Test failed.";
   } catch {
     result!.textContent = "Could not reach the API.";
   }

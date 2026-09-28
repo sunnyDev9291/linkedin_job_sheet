@@ -1,7 +1,7 @@
 import express from "express";
 import { keysMatch } from "./env.ts";
 import { HttpError, sanitizeError } from "./httpError.ts";
-import { parseAddJobRequest } from "../../shared/sheetLogic.ts";
+import { parseAddJobRequest, parseJobStatusRequest } from "../../shared/sheetLogic.ts";
 import type { Country } from "../../shared/countries.ts";
 
 export type AddJobResult = {
@@ -13,12 +13,23 @@ export type AddJobResult = {
 export type AppDeps = {
   resolveKey(): string;
   addJob(input: { country: Country; jobs: { jobUrl: string }[] }): Promise<AddJobResult>;
+  jobStatus(input: { country: Country; jobUrl: string }): Promise<{ present: boolean }>;
   health(): Promise<string>;
 };
 
 export function createApp(deps: AppDeps): express.Express {
   const app = express();
   app.disable("x-powered-by");
+  app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Extension-Key");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
   app.use(express.json({ limit: "32kb" }));
 
   app.get("/health", async (req, res) => {
@@ -26,6 +37,21 @@ export function createApp(deps: AppDeps): express.Express {
       if (!allow(req, res, deps)) return;
       const message = await deps.health();
       res.json({ ok: true, message });
+    } catch (error) {
+      respondError(res, error);
+    }
+  });
+
+  app.post("/job-status", async (req, res) => {
+    try {
+      if (!allow(req, res, deps)) return;
+      const parsed = parseJobStatusRequest(req.body);
+      if (!parsed.ok) {
+        res.status(400).json({ ok: false, error: parsed.error });
+        return;
+      }
+      const result = await deps.jobStatus({ country: parsed.country, jobUrl: parsed.jobUrl });
+      res.json({ ok: true, present: result.present });
     } catch (error) {
       respondError(res, error);
     }
@@ -84,9 +110,11 @@ function allow(req: express.Request, res: express.Response, deps: AppDeps): bool
 
 function respondError(res: express.Response, error: unknown): void {
   if (error instanceof HttpError) {
-    res.status(error.status).json({ ok: false, error: sanitizeError(error.message) });
+    const status = error.status === 424 ? 502 : error.status;
+    const message = sanitizeError(error.message.trim() || "Request failed.");
+    res.status(status).json({ ok: false, error: message });
     return;
   }
   const message = error instanceof Error ? error.message : "Request failed.";
-  res.status(500).json({ ok: false, error: sanitizeError(message) });
+  res.status(500).json({ ok: false, error: sanitizeError(message.trim() || "Request failed.") });
 }

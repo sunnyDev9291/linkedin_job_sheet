@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Job Sheet",
-  "version": "1.0.0",
-  "description": "Press Space, then M, to add the current job URL to a Google Sheet.",
+  "version": "1.0.4",
+  "description": "Shows In sheet / Not yet and lets you add the current job URL to a Google Sheet.",
   "minimum_chrome_version": "120",
   "permissions": ["storage"],
   "host_permissions": ["<all_urls>"],
@@ -19,7 +19,8 @@
     {
       "matches": ["http://*/*", "https://*/*"],
       "js": ["dist/content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ]
 }

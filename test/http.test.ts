@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import { addJobsToCountry, type SheetIo, type ValueUpdate } from "../shared/addJobs.ts";
+import { addJobsToCountry, checkJobOnCountry, type SheetIo, type ValueUpdate } from "../shared/addJobs.ts";
 import { startRowFromRange } from "../shared/sheetLogic.ts";
 import { createApp, type AppDeps } from "../backend/src/app.ts";
 import { HttpError } from "../backend/src/httpError.ts";
@@ -48,6 +48,7 @@ function deps(sheet: SheetIo): AppDeps {
   return {
     resolveKey: () => "secret",
     addJob: (input) => addJobsToCountry(sheet, { ...input, now }),
+    jobStatus: (input) => checkJobOnCountry(sheet, input),
     health: async () => "Connected to Jobs.",
   };
 }
@@ -66,6 +67,14 @@ async function post(base: string, body: unknown, key = "secret"): Promise<Respon
 test("add-job writes LinkedIn once and skips the duplicate URL", async () => {
   const sheet = memoryIo();
   await withServer(deps(sheet), async (base) => {
+    const missing = await fetch(`${base}/job-status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Extension-Key": "secret" },
+      body: JSON.stringify({ country: "Argentina", jobUrl: "https://www.linkedin.com/jobs/view/42" }),
+    });
+    assert.equal(missing.status, 200);
+    assert.deepEqual(await missing.json(), { ok: true, present: false });
+
     const job = {
       country: "Argentina",
       jobs: [{ jobUrl: "https://WWW.LinkedIn.com/jobs/view/42/", platform: "NotUsed" }],
@@ -78,6 +87,14 @@ test("add-job writes LinkedIn once and skips the duplicate URL", async () => {
       skipped: 0,
       message: "Added 1 job to Argentina.",
     });
+
+    const present = await fetch(`${base}/job-status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Extension-Key": "secret" },
+      body: JSON.stringify({ country: "Argentina", jobUrl: "https://www.linkedin.com/jobs/view/42/" }),
+    });
+    assert.equal(present.status, 200);
+    assert.deepEqual(await present.json(), { ok: true, present: true });
 
     const duplicate = await post(base, {
       country: "Argentina",
@@ -105,7 +122,7 @@ test("bad key, country, and URL are rejected", async () => {
     assert.equal(countryBody.ok, false);
     assert.match(countryBody.error, /Country must be one of/);
 
-    const badUrl = await post(base, { country: "Other", jobs: [{ jobUrl: "not a url" }] });
+    const badUrl = await post(base, { country: "Brazil", jobs: [{ jobUrl: "not a url" }] });
     assert.equal(badUrl.status, 400);
     assert.deepEqual(await badUrl.json(), { ok: false, error: "Each job needs an http(s) jobUrl." });
 
@@ -122,6 +139,9 @@ test("missing server configuration is not reported as a bad key", async () => {
         throw new HttpError(500, "Server is missing EXTENSION_API_KEY.");
       },
       addJob: async () => {
+        throw new Error("unused");
+      },
+      jobStatus: async () => {
         throw new Error("unused");
       },
       health: async () => "unused",

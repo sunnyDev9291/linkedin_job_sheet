@@ -29,19 +29,31 @@ test("popup and options both contain the country select", () => {
   assert.match(read("src/popup.ts"), /bindCountrySelect/);
   assert.match(read("src/options.ts"), /bindCountrySelect/);
   assert.match(read("src/options.ts"), /test-connection/);
+  assert.match(read("src/options.ts"), /TEST_CONNECTION/);
+  assert.match(read("src/background.ts"), /TEST_CONNECTION/);
 });
 
-test("Space+M sends the current URL and the sheet writer only updates cells", () => {
+test("Add panel shows persistent status and can send the current URL", () => {
   const content = read("src/content.ts");
   assert.match(content, /ADD_JOB_TO_SHEET/);
+  assert.match(content, /CHECK_JOB_STATUS/);
   assert.match(content, /location\.href\.split\("#"\)/);
-  assert.match(content, /preventDefault/);
+  assert.match(content, /Not yet/);
+  assert.match(content, /In sheet/);
+  assert.match(content, /statusCache/);
+  assert.match(content, /isTopFrame/);
+  assert.match(content, /top:\s*16px/);
+  assert.match(content, /right:\s*16px/);
+  assert.doesNotMatch(content, /reduceChord/);
+  assert.doesNotMatch(content, /refreshStatus\(true\)/);
   assert.match(read("src/background.ts"), /addJobBody/);
+  assert.match(read("src/background.ts"), /job-status/);
   assert.match(read("src/background.ts"), /X-Extension-Key/);
+  assert.match(read("manifest.json"), /"all_frames": false/);
 
   const writer = read("backend/src/googleSheets.ts");
   assert.match(writer, /spreadsheets\.values\.batchUpdate/);
-  assert.match(writer, /valueInputOption: "RAW"/);
+  assert.match(writer, /valueInputOption: "USER_ENTERED"/);
   assert.doesNotMatch(writer, /INSERT_ROWS|insertDimension|values\.append|spreadsheets\.batchUpdate/);
 });
 

@@ -25,7 +25,39 @@ export function formatNyDate(date: Date): string {
   if (!year || !month || !day) {
     throw new Error("Could not format the New York date.");
   }
-  return `${year}/${month}/${day}`;
+  // YYYY-MM-DD so Google Sheets USER_ENTERED stores a real Date, not plain text.
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+/** Normalize a sheet Date cell (text, locale format, or serial) to YYYY-MM-DD. */
+export function sheetDateKey(raw: string): string | null {
+  const text = raw.trim();
+  if (!text) return null;
+
+  let match = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/.exec(text);
+  if (match) {
+    return `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
+  }
+
+  match = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(text);
+  if (match) {
+    return `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
+  }
+
+  if (/^\d+(\.\d+)?$/.test(text)) {
+    const serial = Number(text);
+    // Sheets serial dates are days since 1899-12-30.
+    if (Number.isFinite(serial) && serial >= 20000 && serial < 100000) {
+      const ms = Date.UTC(1899, 11, 30) + Math.floor(serial) * 86_400_000;
+      const utc = new Date(ms);
+      const year = utc.getUTCFullYear();
+      const month = String(utc.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(utc.getUTCDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return null;
 }
 
 export function normalizeJobUrl(raw: string): string {
@@ -155,7 +187,7 @@ export function planSheetWrites(input: {
     if (rowNumber === 1) continue;
     const no = parseNo(row[0] ?? "");
     if (no !== null && no > maxNo) maxNo = no;
-    if ((row[1] ?? "").trim() === input.today) todayCount += 1;
+    if (sheetDateKey(row[1] ?? "") === input.today) todayCount += 1;
     const url = (row[5] ?? "").trim();
     if (url) seen.add(normalizeJobUrl(url));
   }
@@ -189,4 +221,37 @@ export function planSheetWrites(input: {
     : dataWrites;
 
   return { writes, added, skipped };
+}
+
+export function sheetHasJobUrl(existing: ExistingSheet, jobUrl: string): boolean {
+  const target = normalizeJobUrl(jobUrl);
+  if (!target) return false;
+  const startRow = existing.startRow > 0 ? existing.startRow : 1;
+  for (let index = 0; index < existing.values.length; index += 1) {
+    const rowNumber = startRow + index;
+    if (rowNumber === 1) continue;
+    const row = existing.values[index] ?? [];
+    const url = String(row[5] ?? "").trim();
+    if (url && normalizeJobUrl(url) === target) return true;
+  }
+  return false;
+}
+
+export function parseJobStatusRequest(body: unknown):
+  | { ok: true; country: Country; jobUrl: string }
+  | { ok: false; error: string } {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return { ok: false, error: "Request body must be a JSON object." };
+  }
+  const record = body as { country?: unknown; jobUrl?: unknown };
+  if (!isCountry(record.country)) {
+    return {
+      ok: false,
+      error: `Country must be one of: ${COUNTRIES.join(", ")}.`,
+    };
+  }
+  if (typeof record.jobUrl !== "string" || record.jobUrl.trim().length > MAX_URL_LENGTH || !isHttpUrl(record.jobUrl)) {
+    return { ok: false, error: "jobUrl must be an http(s) URL." };
+  }
+  return { ok: true, country: record.country, jobUrl: record.jobUrl.trim() };
 }
