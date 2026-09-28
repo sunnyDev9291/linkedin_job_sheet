@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LinkedIn Job Sheet options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>LinkedIn Job Sheet</h1>
+      <p class="lede">Space, then M, adds the current page URL to the selected country tab. Every row uses Job_Platform LinkedIn.</p>
+      <label for="country">Country</label>
+      <select id="country">
+        <option value="Brazil">Brazil</option>
+        <option value="Argentina" selected>Argentina</option>
+        <option value="Colombia">Colombia</option>
+        <option value="Dominican Republic">Dominican Republic</option>
+        <option value="Other">Other</option>
+      </select>
+      <p id="current">Current country: Argentina</p>
+      <label for="api-base">API base</label>
+      <input id="api-base" type="url" spellcheck="false" placeholder="http://127.0.0.1:8787" />
+      <label for="extension-key">Extension key</label>
+      <input id="extension-key" type="password" spellcheck="false" autocomplete="off" />
+      <p class="note">Use the backend EXTENSION_API_KEY. Do not paste the Google service-account private key here.</p>
+      <div class="actions">
+        <button id="save" type="button">Save</button>
+        <button id="test-connection" class="secondary" type="button">Test connection</button>
+      </div>
+      <p id="test-result" role="status"></p>
+    </main>
+    <script src="../dist/options.js"></script>
+  </body>
+</html>

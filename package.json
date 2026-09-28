@@ -1,0 +1,26 @@
+{
+  "name": "linkedin-job-sheet",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "pack": "node scripts/pack.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test shared/sheetLogic.test.ts shared/addJobs.test.ts src/chord.test.ts src/endpoint.test.ts backend/src/env.test.ts test/http.test.ts test/acceptance.test.ts",
+    "backend": "tsx backend/src/server.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "googleapis": "^148.0.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.1",
+    "@types/express": "^4.17.21",
+    "@types/node": "^24.3.0",
+    "esbuild": "^0.25.9",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
